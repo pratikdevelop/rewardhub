@@ -1,65 +1,62 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
+export const COLORS = {
+  // Backgrounds
+  bg:         '#1a0a2e',   // deep dark purple — main background
+  bgCard:     '#2d1b4e',   // lighter purple — cards / modals
+  bgInput:    '#3b1f6b',   // input fields
+  bgItem:     '#4c2a8a',   // pressed / hover state
 
-import '@/global.css';
+  // Brand
+  primary:    '#7c5cbf',   // purple — buttons, accents
+  primaryDark:'#6b46c1',
+  gold:       '#f5a623',   // coins / highlights
 
-import { Platform } from 'react-native';
+  // Game card colors
+  refer:      '#f5a623',
+  spin:       '#22c55e',
+  scratch:    '#a855f7',
+  captcha:    '#3b82f6',
+  quiz:       '#ef4444',
+  lucky:      '#14b8a6',
 
-export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
-} as const;
+  // Text
+  white:      '#ffffff',
+  textMuted:  'rgba(255,255,255,0.65)',
+  textHint:   'rgba(255,255,255,0.40)',
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+  // Status
+  success:    '#22c55e',
+  error:      '#ef4444',
+  warning:    '#f5a623',
+};
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+export const FONTS = {
+  regular: 'System',
+  bold:    'System',
+};
 
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
-} as const;
+export const SIZES = {
+  xs:  10,
+  sm:  12,
+  md:  14,
+  lg:  16,
+  xl:  20,
+  xxl: 26,
+  xxxl:32,
+};
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const RADIUS = {
+  sm:  8,
+  md:  12,
+  lg:  16,
+  xl:  20,
+  full:999,
+};
+
+export const SPACING = {
+  xs:  4,
+  sm:  8,
+  md:  12,
+  lg:  16,
+  xl:  24,
+  xxl: 32,
+};

@@ -1,98 +1,270 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React from 'react';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ImageBackground,
+  StatusBar,
+} from 'react-native';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { router } from 'expo-router';
+
+export default function Index() {
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+    <ImageBackground
+      source={{
+        uri: 'https://images.unsplash.com/photo-1542751371-adc38448a05e',
+      }}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+      <LinearGradient
+        colors={[
+          'rgba(0,0,0,0.85)',
+          'rgba(18,18,18,0.95)',
+        ]}
+        style={styles.overlay}
+      >
+        {/* Logo Area */}
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+        <View style={styles.logoWrap}>
+          <Text style={styles.logoEmoji}>
+            🎮
+          </Text>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+          <Text style={styles.title}>
+            RewardTube
+          </Text>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+          <Text style={styles.subtitle}>
+            PLAY • WIN • EARN REAL REWARDS
+          </Text>
+        </View>
+
+        {/* Hero Card */}
+
+        <View style={styles.heroCard}>
+          <Text style={styles.heroTitle}>
+            Daily Gaming Rewards
+          </Text>
+
+          <Text style={styles.heroText}>
+            Spin wheels, solve quizzes,
+            scratch cards, and earn coins
+            every day.
+          </Text>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>
+                50K+
+              </Text>
+
+              <Text style={styles.statLabel}>
+                Players
+              </Text>
+            </View>
+
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>
+                ₹10L+
+              </Text>
+
+              <Text style={styles.statLabel}>
+                Rewards
+              </Text>
+            </View>
+
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>
+                24/7
+              </Text>
+
+              <Text style={styles.statLabel}>
+                Games
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Buttons */}
+
+        <TouchableOpacity
+          style={styles.primaryBtn}
+          activeOpacity={0.9}
+          onPress={() =>
+            router.push('/login')
+          }
+        >
+          <LinearGradient
+            colors={[
+              '#8B5CF6',
+              '#6D28D9',
+            ]}
+            style={styles.primaryGradient}
+          >
+            <Text style={styles.primaryText}>
+              START PLAYING
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryBtn}
+          activeOpacity={0.8}
+          onPress={() =>
+            router.push('/register')
+          }
+        >
+          <Text style={styles.secondaryText}>
+            CREATE ACCOUNT
+          </Text>
+        </TouchableOpacity>
+
+        {/* Footer */}
+
+        <Text style={styles.footer}>
+          Secure • Fast Withdrawals • Fun
+          Games
+        </Text>
+      </LinearGradient>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  background: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+    backgroundColor: '#000',
   },
-  safeArea: {
+
+  overlay: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
+    paddingHorizontal: 24,
+    paddingTop: 80,
+    paddingBottom: 40,
+    justifyContent: 'space-between',
+  },
+
+  logoWrap: {
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    marginTop: 20,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+
+  logoEmoji: {
+    fontSize: 72,
+    marginBottom: 14,
   },
+
   title: {
+    color: '#fff',
+    fontSize: 42,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+
+  subtitle: {
+    color: '#FFD700',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 10,
+    letterSpacing: 3,
     textAlign: 'center',
   },
-  code: {
-    textTransform: 'uppercase',
+
+  heroCard: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 28,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+
+  heroTitle: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '800',
+    marginBottom: 14,
+  },
+
+  heroText: {
+    color: '#CFCFCF',
+    fontSize: 16,
+    lineHeight: 24,
+  },
+
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 28,
+  },
+
+  statBox: {
+    alignItems: 'center',
+    flex: 1,
+  },
+
+  statValue: {
+    color: '#FFD700',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+
+  statLabel: {
+    color: '#aaa',
+    fontSize: 12,
+    marginTop: 6,
+  },
+
+  primaryBtn: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginTop: 30,
+  },
+
+  primaryGradient: {
+    paddingVertical: 18,
+    alignItems: 'center',
+    borderRadius: 18,
+  },
+
+  primaryText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+
+  secondaryBtn: {
+    borderWidth: 1.5,
+    borderColor: '#8B5CF6',
+    borderRadius: 18,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+
+  secondaryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+
+  footer: {
+    color: '#777',
+    textAlign: 'center',
+    fontSize: 13,
+    marginTop: 24,
   },
 });
