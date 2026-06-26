@@ -1,26 +1,22 @@
-import React from 'react';
-
+import { useRouter } from 'expo-router';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-  StatusBar,
+    Dimensions,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { router } from 'expo-router';
 
 import { useAuth } from '../context/AuthContext';
 
 import {
-  COLORS,
-  SIZES,
-  SPACING,
-  RADIUS,
+    COLORS,
+    RADIUS,
+    SIZES,
+    SPACING,
 } from '../constants/theme';
 
 const { width } = Dimensions.get('window');
@@ -28,7 +24,15 @@ const { width } = Dimensions.get('window');
 const CARD_SIZE =
   (width - SPACING.xl * 2 - SPACING.md) / 2;
 
-const GAMES = [
+type Game = {
+  key: string;
+  label: string;
+  sub: string;
+  emoji: string;
+  color: string;
+};
+
+const GAMES: Game[] = [
   {
     key: 'spin',
     label: 'Spin Wheel',
@@ -74,17 +78,17 @@ const GAMES = [
 ];
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   const { user, coins, logout } = useAuth();
 
-  const handleGamePress = (
-    gameKey: string
-  ) => {
-    alert(
-      `Opening ${gameKey} — build this screen next!`
-    );
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/(auth)/login');
+  };
 
-    // Example later:
-    // router.push(`/games/${gameKey}`);
+  const handleGamePress = (gameKey: string) => {
+    router.push(`/games/${gameKey}`);
   };
 
   return (
@@ -99,7 +103,8 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Bar */}
+
+        {/* Header */}
 
         <View style={styles.topBar}>
           <Text style={styles.appName}>
@@ -107,7 +112,7 @@ export default function HomeScreen() {
           </Text>
 
           <TouchableOpacity
-            onPress={logout}
+            onPress={handleLogout}
             style={styles.logoutBtn}
           >
             <Text style={styles.logoutText}>
@@ -126,11 +131,11 @@ export default function HomeScreen() {
 
         <View style={styles.coinCard}>
           <Text style={styles.coinEmail}>
-            {user?.email}
+            {user?.email ?? 'No Email'}
           </Text>
 
           <Text style={styles.coinBalance}>
-            Coins :
+            Coins:
             <Text style={styles.coinNumber}>
               {' '}
               {coins}
@@ -145,9 +150,7 @@ export default function HomeScreen() {
           style={styles.withdrawBtn}
           activeOpacity={0.85}
           onPress={() =>
-            alert(
-              'Withdrawal screen — coming next!'
-            )
+            alert('Withdrawal screen coming soon')
           }
         >
           <Text style={styles.withdrawText}>
@@ -162,14 +165,13 @@ export default function HomeScreen() {
         </Text>
 
         <View style={styles.grid}>
-          {GAMES.map(game => (
+          {GAMES.map((game) => (
             <TouchableOpacity
               key={game.key}
               style={[
                 styles.gameCard,
                 {
-                  backgroundColor:
-                    game.color,
+                  backgroundColor: game.color,
                 },
               ]}
               activeOpacity={0.85}
@@ -181,18 +183,20 @@ export default function HomeScreen() {
                 {game.emoji}
               </Text>
 
-              <Text style={styles.gameName}>
-                {game.label}
-              </Text>
+              <View>
+                <Text style={styles.gameName}>
+                  {game.label}
+                </Text>
 
-              <Text style={styles.gameSub}>
-                {game.sub}
-              </Text>
+                <Text style={styles.gameSub}>
+                  {game.sub}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Daily Banner */}
+        {/* Daily Reward */}
 
         <TouchableOpacity
           style={styles.dailyBanner}
@@ -212,6 +216,7 @@ export default function HomeScreen() {
             ›
           </Text>
         </TouchableOpacity>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -229,14 +234,14 @@ const styles = StyleSheet.create({
 
   scroll: {
     padding: SPACING.xl,
-    paddingBottom: SPACING.xxl * 2,
+    paddingBottom: 100,
   },
 
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.xs,
+    marginBottom: SPACING.sm,
   },
 
   appName: {
@@ -246,16 +251,16 @@ const styles = StyleSheet.create({
   },
 
   logoutBtn: {
-    padding: SPACING.sm,
-    backgroundColor: COLORS.bgCard,
+    width: 40,
+    height: 40,
     borderRadius: RADIUS.full,
-    width: 36,
-    height: 36,
+    backgroundColor: COLORS.bgCard,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   logoutText: {
+    color: COLORS.white,
     fontSize: 18,
   },
 
@@ -263,7 +268,7 @@ const styles = StyleSheet.create({
     color: COLORS.gold,
     fontSize: SIZES.xs,
     fontWeight: '700',
-    letterSpacing: 2.5,
+    letterSpacing: 2,
     textAlign: 'center',
     marginBottom: SPACING.lg,
   },
@@ -273,12 +278,11 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.xl,
     padding: SPACING.xl,
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
   },
 
   coinEmail: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: SIZES.sm,
+    color: COLORS.textMuted,
     marginBottom: SPACING.sm,
   },
 
@@ -289,37 +293,34 @@ const styles = StyleSheet.create({
   },
 
   coinNumber: {
-    color: COLORS.gold,
+    color: COLORS.white,
   },
 
   withdrawBtn: {
+    height: 55,
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.lg,
-    height: 52,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: SPACING.xl,
   },
 
   withdrawText: {
     color: COLORS.white,
-    fontSize: SIZES.md,
     fontWeight: '700',
-    letterSpacing: 1.5,
+    letterSpacing: 1,
   },
 
   sectionLabel: {
     color: COLORS.textMuted,
-    fontSize: SIZES.sm,
-    fontWeight: '600',
-    letterSpacing: 1,
     marginBottom: SPACING.md,
+    fontWeight: '600',
   },
 
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.md,
+    justifyContent: 'space-between',
     marginBottom: SPACING.xl,
   },
 
@@ -327,26 +328,25 @@ const styles = StyleSheet.create({
     width: CARD_SIZE,
     height: CARD_SIZE,
     borderRadius: RADIUS.xl,
-    padding: SPACING.md,
-    justifyContent: 'flex-end',
+    padding: SPACING.lg,
+    justifyContent: 'space-between',
+    marginBottom: SPACING.md,
   },
 
   gameEmoji: {
     fontSize: 36,
-    marginBottom: 'auto',
   },
 
   gameName: {
     color: COLORS.white,
-    fontSize: SIZES.md,
     fontWeight: '700',
-    marginTop: SPACING.lg,
+    fontSize: SIZES.md,
   },
 
   gameSub: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: SIZES.xs,
-    marginTop: 2,
+    marginTop: 4,
   },
 
   dailyBanner: {
@@ -354,8 +354,8 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     padding: SPACING.lg,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.gold,
   },
@@ -368,13 +368,11 @@ const styles = StyleSheet.create({
 
   dailySub: {
     color: COLORS.textMuted,
-    fontSize: SIZES.sm,
-    marginTop: 3,
+    marginTop: 4,
   },
 
   dailyArrow: {
     color: COLORS.gold,
-    fontSize: 28,
-    fontWeight: '300',
+    fontSize: 30,
   },
 });

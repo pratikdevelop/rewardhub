@@ -1,6 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, Animated, Dimensions,
+    Animated, Dimensions,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { COLORS, SIZES, SPACING } from '../constants/theme';
 

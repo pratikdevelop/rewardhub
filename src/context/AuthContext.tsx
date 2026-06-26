@@ -1,91 +1,172 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 
-// ─── When you add Firebase, replace the mock below ───────────────────────────
-// import auth from '@react-native-firebase/auth';
-// import firestore from '@react-native-firebase/firestore';
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────
 
-const AuthContext = createContext(null);
+type User = {
+  uid: string;
+  email: string;
+  displayName: string;
+};
 
-export function AuthProvider({ children } : any) {
-  const [user, setUser]       = useState(null);   // Firebase user object
-  const [coins, setCoins]     = useState(0);       // user's coin balance
-  const [loading, setLoading] = useState(true);    // splash / auth check
+type AuthContextType = {
+  user: User | null;
+  coins: number;
+  loading: boolean;
 
-  // ── On mount: check if a session already exists ──────────────────────────
+  register: (
+    email: string,
+    password: string,
+    name: string
+  ) => Promise<User>;
+
+  login: (
+    email: string,
+    password: string
+  ) => Promise<User>;
+
+  logout: () => Promise<void>;
+
+  addCoins: (
+    amount: number
+  ) => Promise<void>;
+};
+
+// ─────────────────────────────────────────────────────────────
+// Context
+// ─────────────────────────────────────────────────────────────
+
+const AuthContext =
+  createContext<AuthContextType | null>(
+    null
+  );
+
+// ─────────────────────────────────────────────────────────────
+// Provider
+// ─────────────────────────────────────────────────────────────
+
+export function AuthProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [user, setUser] =
+    useState<User | null>(null);
+
+  const [coins, setCoins] =
+    useState(0);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  // ───────────────────────────────────────────────────────────
+  // Initial Auth Check
+  // ───────────────────────────────────────────────────────────
+
   useEffect(() => {
-    // MOCK — replace with Firebase auth listener:
-    // const unsubscribe = auth().onAuthStateChanged(async (firebaseUser) => {
-    //   if (firebaseUser) {
-    //     setUser(firebaseUser);
-    //     const doc = await firestore().collection('users').doc(firebaseUser.uid).get();
-    //     setCoins(doc.data()?.coins ?? 0);
-    //   } else {
-    //     setUser(null);
-    //   }
-    //   setLoading(false);
-    // });
-    // return unsubscribe;
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1500);
 
-    // MOCK: simulate a quick auth check
-    const timer = setTimeout(() => setLoading(false), 1500);
     return () => clearTimeout(timer);
   }, []);
 
-  // ── Register with email + password ───────────────────────────────────────
-  const register = async (email, password, name) => {
-    // MOCK — replace with:
-    // const cred = await auth().createUserWithEmailAndPassword(email, password);
-    // await firestore().collection('users').doc(cred.user.uid).set({
-    //   name, email, coins: 0, createdAt: firestore.FieldValue.serverTimestamp(),
-    // });
-    // setUser(cred.user);
+  // ───────────────────────────────────────────────────────────
+  // Register
+  // ───────────────────────────────────────────────────────────
 
-    // MOCK
-    const mockUser = { uid: 'mock-uid', email, displayName: name };
+  const register = async (
+    email: string,
+    password: string,
+    name: string
+  ) => {
+    const mockUser: User = {
+      uid: 'mock-uid',
+      email,
+      displayName: name,
+    };
+
     setUser(mockUser);
     setCoins(0);
+
     return mockUser;
   };
 
-  // ── Login with email + password ───────────────────────────────────────────
-  const login = async (email, password) => {
-    // MOCK — replace with:
-    // const cred = await auth().signInWithEmailAndPassword(email, password);
-    // const doc  = await firestore().collection('users').doc(cred.user.uid).get();
-    // setCoins(doc.data()?.coins ?? 0);
-    // setUser(cred.user);
+  // ───────────────────────────────────────────────────────────
+  // Login
+  // ───────────────────────────────────────────────────────────
 
-    // MOCK
-    const mockUser = { uid: 'mock-uid', email, displayName: 'User' };
+  const login = async (
+    email: string,
+    password: string
+  ) => {
+    const mockUser: User = {
+      uid: 'mock-uid',
+      email,
+      displayName: 'User',
+    };
+
     setUser(mockUser);
     setCoins(50);
+
     return mockUser;
   };
 
-  // ── Logout ────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────
+  // Logout
+  // ───────────────────────────────────────────────────────────
+
   const logout = async () => {
-    // await auth().signOut();
     setUser(null);
     setCoins(0);
   };
 
-  // ── Add coins (called after every game win) ───────────────────────────────
-  const addCoins = async (amount) => {
-    const newTotal = coins + amount;
-    setCoins(newTotal);
+  // ───────────────────────────────────────────────────────────
+  // Add Coins
+  // ───────────────────────────────────────────────────────────
 
-    // REPLACE with:
-    // await firestore().collection('users').doc(user.uid).update({
-    //   coins: firestore.FieldValue.increment(amount),
-    // });
+  const addCoins = async (
+    amount: number
+  ) => {
+    setCoins((prev) => prev + amount);
   };
 
   return (
-    <AuthContext.Provider value={{ user, coins, loading, register, login, logout, addCoins }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        coins,
+        loading,
+        register,
+        login,
+        logout,
+        addCoins,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+// ─────────────────────────────────────────────────────────────
+// Hook
+// ─────────────────────────────────────────────────────────────
+
+export const useAuth = () => {
+  const context =
+    useContext(AuthContext);
+
+  if (!context) {
+    throw new Error(
+      'useAuth must be used inside AuthProvider'
+    );
+  }
+
+  return context;
+};

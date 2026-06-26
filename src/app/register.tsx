@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { router } from 'expo-router';
@@ -15,16 +15,16 @@ import { router } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 
 import {
-  PrimaryButton,
-  AppInput,
-  InlineToast,
+    AppInput,
+    InlineToast,
+    PrimaryButton,
 } from '../components';
 
 import {
-  COLORS,
-  SIZES,
-  SPACING,
-  RADIUS,
+    COLORS,
+    RADIUS,
+    SIZES,
+    SPACING,
 } from '../constants/theme';
 
 export default function RegisterScreen() {

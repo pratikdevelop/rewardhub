@@ -1,22 +1,22 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  TextInputProps,
-  StyleProp,
-  ViewStyle,
+    ActivityIndicator,
+    StyleProp,
+    StyleSheet,
+    Text,
+    TextInput,
+    TextInputProps,
+    TouchableOpacity,
+    View,
+    ViewStyle,
 } from 'react-native';
 
 import {
-  COLORS,
-  SIZES,
-  RADIUS,
-  SPACING,
+    COLORS,
+    RADIUS,
+    SIZES,
+    SPACING,
 } from '../constants/theme';
 
 // ─────────────────────────────────────────────────────────────
