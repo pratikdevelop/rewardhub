@@ -1,22 +1,22 @@
 import { useRouter } from 'expo-router';
 import {
-    Dimensions,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../context/AuthContext';
 
 import {
-    COLORS,
-    RADIUS,
-    SIZES,
-    SPACING,
+  COLORS,
+  RADIUS,
+  SIZES,
+  SPACING,
 } from '../constants/theme';
 
 const { width } = Dimensions.get('window');
@@ -36,51 +36,58 @@ const GAMES: Game[] = [
   {
     key: 'spin',
     label: 'Spin Wheel',
-    sub: 'Win Coins',
+    sub: 'Test Your Luck!',
     emoji: '🎡',
     color: COLORS.spin,
   },
   {
     key: 'scratch',
-    label: 'Scratch & Win',
-    sub: 'Exciting Rewards',
+    label: 'Scratch Card',
+    sub: 'Reveal Surprises',
     emoji: '🎁',
     color: COLORS.scratch,
   },
-  {
-    key: 'captcha',
-    label: 'Captcha Task',
-    sub: 'Earn Coins',
-    emoji: '🔐',
-    color: COLORS.captcha,
+    {
+    key: 'captcha', // Keep key as 'captcha' so your existing route still works perfectly!
+    label: 'Mine Sweeper',
+    sub: 'Find Hidden Gems',
+    emoji: '💎',
+    color: '#00b894', // Beautiful emerald green
   },
   {
-    key: 'quiz',
-    label: 'Quiz Time',
-    sub: 'Answer & Win',
+    key: 'quiz', // Keeping 'quiz' key so your existing buttons/routing still work!
+    label: 'Color Dash',
+    sub: 'Brain Trick',
     emoji: '🧠',
-    color: COLORS.quiz,
+    color: '#f1c40f', // Vibrant yellow
   },
   {
     key: 'lucky',
     label: 'Lucky Number',
-    sub: 'Pick & Win',
+    sub: 'Pick & Pray!',
     emoji: '🍀',
     color: COLORS.lucky,
   },
   {
-    key: 'refer',
-    label: 'Refer & Earn',
-    sub: 'Invite Friends',
-    emoji: '👥',
-    color: COLORS.refer,
+    key: 'arcane-duel',
+    label: 'Arcane Duel',
+    sub: 'Card Battle',
+    emoji: '🃏',
+    color: '#5B2C8E',
+  },
+  {
+    key: 'ChessGame',
+    label: 'Chess',
+    sub: 'Strategic Win',
+    emoji: '♟️',
+    color: '#2D5A27',
   },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
 
-  const { user, coins, logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = async () => {
     await logout();
@@ -88,7 +95,7 @@ export default function HomeScreen() {
   };
 
   const handleGamePress = (gameKey: string) => {
-    router.push(`/games/${gameKey}`);
+    router.push(`/games/${gameKey}`); 
   };
 
   return (
@@ -104,65 +111,50 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* Header */}
-
+        {/* ── Header ─────────────────────────────── */}
         <View style={styles.topBar}>
           <Text style={styles.appName}>
             Reward Tube
           </Text>
 
-          <TouchableOpacity
-            onPress={handleLogout}
-            style={styles.logoutBtn}
-          >
-            <Text style={styles.logoutText}>
-              ⎋
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => router.push('/profile')}
+              style={styles.iconBtn}
+            >
+              <Text style={styles.iconText}>👤</Text>
+            </TouchableOpacity>
+
+            {/* <TouchableOpacity
+              onPress={handleLogout}
+              style={styles.iconBtn}
+            >
+              <Text style={styles.logoutText}>⎋</Text>
+            </TouchableOpacity> */}
+          </View>
         </View>
 
-        {/* Tagline */}
-
+        {/* ── Tagline ─────────────────────────────── */}
         <Text style={styles.tagline}>
-          PLAY • EARN • REDEEM
+          PLAY • WIN • REPEAT
         </Text>
 
-        {/* Coin Card */}
-
+        {/* ── Token Card ─────────────────────────── */}
         <View style={styles.coinCard}>
           <Text style={styles.coinEmail}>
-            {user?.email ?? 'No Email'}
+            {user?.email ?? 'Player'}
           </Text>
 
           <Text style={styles.coinBalance}>
-            Coins:
+            Tokens:
             <Text style={styles.coinNumber}>
-              {' '}
-              {coins}
-            </Text>{' '}
-            💰
+              {' '}{user?.coins}
+            </Text>{' '}🎮
           </Text>
         </View>
 
-        {/* Withdrawal */}
-
-        <TouchableOpacity
-          style={styles.withdrawBtn}
-          activeOpacity={0.85}
-          onPress={() =>
-            alert('Withdrawal screen coming soon')
-          }
-        >
-          <Text style={styles.withdrawText}>
-            💳 WITHDRAWAL
-          </Text>
-        </TouchableOpacity>
-
-        {/* Games */}
-
-        <Text style={styles.sectionLabel}>
-          Games
-        </Text>
+        {/* ── Games Section ───────────────────────── */}
+        <Text style={styles.sectionLabel}>🎮 Fun Games</Text>
 
         <View style={styles.grid}>
           {GAMES.map((game) => (
@@ -170,14 +162,10 @@ export default function HomeScreen() {
               key={game.key}
               style={[
                 styles.gameCard,
-                {
-                  backgroundColor: game.color,
-                },
+                { backgroundColor: game.color },
               ]}
               activeOpacity={0.85}
-              onPress={() =>
-                handleGamePress(game.key)
-              }
+              onPress={() => handleGamePress(game.key)}
             >
               <Text style={styles.gameEmoji}>
                 {game.emoji}
@@ -187,7 +175,6 @@ export default function HomeScreen() {
                 <Text style={styles.gameName}>
                   {game.label}
                 </Text>
-
                 <Text style={styles.gameSub}>
                   {game.sub}
                 </Text>
@@ -196,9 +183,8 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* Daily Reward */}
-
-        <TouchableOpacity
+        {/* ── Daily Check-in ──────────────────────── */}
+        {/* <TouchableOpacity
           style={styles.dailyBanner}
           activeOpacity={0.85}
         >
@@ -206,16 +192,12 @@ export default function HomeScreen() {
             <Text style={styles.dailyTitle}>
               🎯 Daily Check-in
             </Text>
-
             <Text style={styles.dailySub}>
-              Claim 10 free coins every day!
+              Claim 10 free tokens every day!
             </Text>
           </View>
-
-          <Text style={styles.dailyArrow}>
-            ›
-          </Text>
-        </TouchableOpacity>
+          <Text style={styles.dailyArrow}>›</Text>
+        </TouchableOpacity> */}
 
       </ScrollView>
     </SafeAreaView>
@@ -228,28 +210,40 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bg,
   },
 
-  flex: {
-    flex: 1,
-  },
+  flex: { flex: 1 },
 
   scroll: {
     padding: SPACING.xl,
     paddingBottom: 100,
   },
 
+  // Header
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.sm,
   },
-
   appName: {
     color: COLORS.white,
     fontSize: SIZES.xl,
     fontWeight: '700',
   },
-
+  headerActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.bgCard,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconText: {
+    fontSize: 18,
+  },
   logoutBtn: {
     width: 40,
     height: 40,
@@ -258,12 +252,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   logoutText: {
     color: COLORS.white,
     fontSize: 18,
   },
 
+  // Tagline
   tagline: {
     color: COLORS.gold,
     fontSize: SIZES.xs,
@@ -273,57 +267,39 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
 
+  // Token card
   coinCard: {
     backgroundColor: COLORS.primaryDark,
     borderRadius: RADIUS.xl,
     padding: SPACING.xl,
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.xl,
   },
-
   coinEmail: {
     color: COLORS.textMuted,
     marginBottom: SPACING.sm,
   },
-
   coinBalance: {
     color: COLORS.gold,
     fontSize: SIZES.xxl,
     fontWeight: '700',
   },
-
   coinNumber: {
     color: COLORS.white,
   },
 
-  withdrawBtn: {
-    height: 55,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-  },
-
-  withdrawText: {
-    color: COLORS.white,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-
+  // Games grid
   sectionLabel: {
     color: COLORS.textMuted,
     marginBottom: SPACING.md,
     fontWeight: '600',
   },
-
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: SPACING.xl,
   },
-
   gameCard: {
     width: CARD_SIZE,
     height: CARD_SIZE,
@@ -332,23 +308,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: SPACING.md,
   },
-
-  gameEmoji: {
-    fontSize: 36,
-  },
-
+  gameEmoji: { fontSize: 36 },
   gameName: {
     color: COLORS.white,
     fontWeight: '700',
     fontSize: SIZES.md,
   },
-
   gameSub: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: SIZES.xs,
     marginTop: 4,
   },
 
+  // Daily banner
   dailyBanner: {
     backgroundColor: COLORS.bgCard,
     borderRadius: RADIUS.lg,
@@ -359,18 +331,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.gold,
   },
-
   dailyTitle: {
     color: COLORS.white,
     fontSize: SIZES.md,
     fontWeight: '700',
   },
-
   dailySub: {
     color: COLORS.textMuted,
     marginTop: 4,
   },
-
   dailyArrow: {
     color: COLORS.gold,
     fontSize: 30,

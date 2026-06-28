@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter } from "expo-router";
 import {
   Alert,
   ScrollView,
@@ -6,179 +6,420 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, RADIUS, SIZES, SPACING } from '../constants/theme';
-import { useAuth } from '../context/AuthContext';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-// Mock data — replace with Firestore query later
-const TRANSACTIONS = [
-  { id: '1', game: 'Spin Wheel',   type: 'win',        amount: +20,  time: '2 hrs ago'  },
-  { id: '2', game: 'Quiz Time',    type: 'win',        amount: +15,  time: '5 hrs ago'  },
-  { id: '3', game: 'Daily Bonus',  type: 'bonus',      amount: +10,  time: 'Yesterday'  },
-  { id: '4', game: 'UPI Payout',   type: 'withdrawal', amount: -500, time: '2 days ago' },
-  { id: '5', game: 'Lucky Number', type: 'win',        amount: +30,  time: '3 days ago' },
-  { id: '6', game: 'Scratch Card', type: 'win',        amount: +25,  time: '4 days ago' },
-];
-
-const STATS = [
-  { label: 'Games Played', value: '24',  emoji: '🎮' },
-  { label: 'Total Earned', value: '890', emoji: '💰' },
-  { label: 'Withdrawn',    value: '500', emoji: '💳' },
-  { label: 'Referrals',    value: '0',   emoji: '👥' },
-];
+import { COLORS, RADIUS, SIZES, SPACING } from "../constants/theme";
+import { useAuth } from "../context/AuthContext";
 
 const SETTINGS = [
-  { label: 'Change Password',        emoji: '🔑' },
-  { label: 'Notification Settings',  emoji: '🔔' },
-  { label: 'Privacy Policy',         emoji: '📄' },
-  { label: 'Help & Support',         emoji: '💬' },
+  {
+    label: "Change Password",
+    emoji: "🔑",
+  },
+  // {
+  //   label: "Notification Settings",
+  //   emoji: "🔔",
+  // },
+  {
+    label: "Privacy Policy",
+    emoji: "📄",
+  },
+  // {
+  //   label: "Help & Support",
+  //   emoji: "💬",
+  // },
+   {
+    label: "Terms & Services",
+    emoji: "📜",
+  },
+  {
+    label: "Delete Account",
+    emoji: "🗑️",
+  },
 ];
 
 export default function ProfileScreen() {
-  const { user, coins, logout } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
 
   const confirmLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert("Logout", "Are you sure you want to log out?", [
       {
-        text: 'Logout',
-        style: 'destructive',
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Logout",
+        style: "destructive",
         onPress: async () => {
           await logout();
-          router.replace('/login');
+    router.replace('/(auth)/login');
         },
       },
     ]);
   };
 
-  const avatar = (user?.displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase();
+  const avatar = (
+    user?.displayName?.[0] ??
+    user?.email?.[0] ??
+    "?"
+  ).toUpperCase();
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>‹  Back</Text>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backText}>‹ Back</Text>
           </TouchableOpacity>
+
           <Text style={styles.title}>Profile</Text>
+
           <TouchableOpacity onPress={confirmLogout}>
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Avatar card */}
+        {/* Profile Card */}
         <View style={styles.avatarCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarLetter}>{avatar}</Text>
           </View>
-          <Text style={styles.name}>{user?.displayName ?? 'User'}</Text>
-          <Text style={styles.email}>{user?.email}</Text>
+
+          <Text style={styles.name}>
+            {user?.displayName || "Guest User"}
+          </Text>
+
+          <Text style={styles.email}>
+            {user?.email || "No Email"}
+          </Text>
+
           <View style={styles.coinPill}>
-            <Text style={styles.coinPillText}>💰  {coins} coins</Text>
+            <Text style={styles.coinPillText}>
+              🪙 {user?.coins} Coins
+            </Text>
           </View>
         </View>
 
-        {/* Stats */}
-        <Text style={styles.sectionTitle}>Your Stats</Text>
-        <View style={styles.statsGrid}>
-          {STATS.map(s => (
-            <View key={s.label} style={styles.statCard}>
-              <Text style={styles.statEmoji}>{s.emoji}</Text>
-              <Text style={styles.statValue}>{s.value}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
-          ))}
-        </View>
+        {/* Account Information */}
 
-        {/* Transaction history */}
-        <Text style={styles.sectionTitle}>Transaction History</Text>
-        <View style={styles.txCard}>
-          {TRANSACTIONS.map((tx, i) => (
-            <View
-              key={tx.id}
-              style={[styles.txRow, i < TRANSACTIONS.length - 1 && styles.txBorder]}
+        <Text style={styles.sectionTitle}>
+          Account Information
+        </Text>
+
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>
+              Display Name
+            </Text>
+
+            <Text style={styles.infoValue}>
+              {user?.displayName || "Not Available"}
+            </Text>
+          </View>
+
+          <View style={styles.infoDivider} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>
+              Email
+            </Text>
+
+            <Text style={styles.infoValue}>
+              {user?.email || "Not Available"}
+            </Text>
+          </View>
+
+          <View style={styles.infoDivider} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>
+              User ID
+            </Text>
+
+            <Text
+              style={styles.infoValue}
+              numberOfLines={1}
             >
-              <View style={styles.txLeft}>
-                <Text style={styles.txGame}>{tx.game}</Text>
-                <Text style={styles.txTime}>{tx.time}</Text>
-              </View>
-              <Text style={[styles.txAmount, { color: tx.amount > 0 ? COLORS.success : COLORS.error }]}>
-                {tx.amount > 0 ? `+${tx.amount}` : tx.amount}  💰
-              </Text>
-            </View>
-          ))}
+              {user?.uid}
+            </Text>
+          </View>
+
+          <View style={styles.infoDivider} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>
+              Coins
+            </Text>
+
+            <Text
+              style={[
+                styles.infoValue,
+                {
+                  color: COLORS.gold,
+                  fontWeight: "700",
+                },
+              ]}
+            >
+              🪙 {user?.coins}
+            </Text>
+          </View>
         </View>
 
         {/* Settings */}
-        <Text style={styles.sectionTitle}>Account Settings</Text>
+
+        <Text style={styles.sectionTitle}>
+          Account Settings
+        </Text>
+
         <View style={styles.settingsCard}>
-          {SETTINGS.map((s, i) => (
+          {SETTINGS.map((item, index) => (
             <TouchableOpacity
-              key={s.label}
-              style={[styles.settingsRow, i < SETTINGS.length - 1 && styles.settingsBorder]}
+              key={item.label}
+              style={[
+                styles.settingsRow,
+                index !== SETTINGS.length - 1 &&
+                  styles.settingsBorder,
+              ]}
+               onPress={() => {
+  switch (item.label) {
+    case "Change Password":
+      router.push("/change-password");
+      break;
+
+    case "Privacy Policy":
+      router.push("/privacy");
+      break;
+
+    case "Terms & Services":
+      router.push("/terms");
+      break;
+
+    case "Delete Account":
+      router.push("/delete-account");
+      break;
+  }
+
+  }}
             >
-              <Text style={styles.settingsEmoji}>{s.emoji}</Text>
-              <Text style={styles.settingsLabel}>{s.label}</Text>
-              <Text style={styles.settingsArrow}>›</Text>
+              <Text style={styles.settingsEmoji}>
+                {item.emoji}
+              </Text>
+
+              <Text style={styles.settingsLabel}>
+                {item.label}
+              </Text>
+
+              <Text style={styles.settingsArrow}>
+                ›
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={confirmLogout}>
-          <Text style={styles.logoutBtnText}>⎋  Sign Out</Text>
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={confirmLogout}
+        >
+          <Text style={styles.logoutBtnText}>
+            ⎋ Sign Out
+          </Text>
         </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: COLORS.bg },
-  scroll: { padding: SPACING.xl, paddingBottom: 60 },
+  safe: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
 
-  header:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.xl },
-  backBtn:    { padding: SPACING.sm },
-  backText:   { color: COLORS.primary, fontSize: SIZES.lg },
-  title:      { color: COLORS.white, fontSize: SIZES.xl, fontWeight: '700' },
-  logoutText: { color: COLORS.error, fontSize: SIZES.md },
+  scroll: {
+    padding: SPACING.xl,
+    paddingBottom: 60,
+  },
 
-  avatarCard: { backgroundColor: COLORS.bgCard, borderRadius: RADIUS.xl, padding: SPACING.xl, alignItems: 'center', marginBottom: SPACING.xl },
-  avatar:     { width: 76, height: 76, borderRadius: 38, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.md },
-  avatarLetter:{ color: COLORS.white, fontSize: 34, fontWeight: '700' },
-  name:       { color: COLORS.white, fontSize: SIZES.xl, fontWeight: '700' },
-  email:      { color: COLORS.textMuted, fontSize: SIZES.sm, marginTop: 4 },
-  coinPill:   { backgroundColor: 'rgba(245,166,35,0.15)', borderRadius: RADIUS.full, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.xs, borderWidth: 1, borderColor: COLORS.gold, marginTop: SPACING.md },
-  coinPillText:{ color: COLORS.gold, fontWeight: '700', fontSize: SIZES.md },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: SPACING.xl,
+  },
 
-  sectionTitle: { color: COLORS.white, fontSize: SIZES.lg, fontWeight: '700', marginBottom: SPACING.md, marginTop: SPACING.lg },
+  backBtn: {
+    padding: SPACING.sm,
+  },
 
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
-  statCard:  { flex: 1, minWidth: '45%', backgroundColor: COLORS.bgCard, borderRadius: RADIUS.lg, padding: SPACING.lg, alignItems: 'center' },
-  statEmoji: { fontSize: 28, marginBottom: SPACING.xs },
-  statValue: { color: COLORS.gold, fontSize: SIZES.xxl, fontWeight: '700' },
-  statLabel: { color: COLORS.textMuted, fontSize: SIZES.xs, marginTop: 2, textAlign: 'center' },
+  backText: {
+    color: COLORS.primary,
+    fontSize: SIZES.lg,
+    fontWeight: "600",
+  },
 
-  txCard:    { backgroundColor: COLORS.bgCard, borderRadius: RADIUS.lg, overflow: 'hidden' },
-  txRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: SPACING.lg },
-  txBorder:  { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  txLeft:    { flex: 1 },
-  txGame:    { color: COLORS.white, fontSize: SIZES.md, fontWeight: '500' },
-  txTime:    { color: COLORS.textMuted, fontSize: SIZES.xs, marginTop: 2 },
-  txAmount:  { fontSize: SIZES.md, fontWeight: '700' },
+  title: {
+    color: COLORS.white,
+    fontSize: SIZES.xl,
+    fontWeight: "700",
+  },
 
-  settingsCard:  { backgroundColor: COLORS.bgCard, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.xl },
-  settingsRow:   { flexDirection: 'row', alignItems: 'center', padding: SPACING.lg, gap: SPACING.md },
-  settingsBorder:{ borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  settingsEmoji: { fontSize: 20 },
-  settingsLabel: { color: COLORS.white, fontSize: SIZES.md, flex: 1 },
-  settingsArrow: { color: COLORS.textMuted, fontSize: SIZES.xl },
+  logoutText: {
+    color: COLORS.error,
+    fontSize: SIZES.md,
+    fontWeight: "600",
+  },
 
-  logoutBtn:     { borderWidth: 1.5, borderColor: COLORS.error, borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center' },
-  logoutBtnText: { color: COLORS.error, fontSize: SIZES.md, fontWeight: '600' },
+  avatarCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    alignItems: "center",
+    marginBottom: SPACING.xl,
+  },
+
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: SPACING.md,
+  },
+
+  avatarLetter: {
+    color: COLORS.white,
+    fontSize: 34,
+    fontWeight: "700",
+  },
+
+  name: {
+    color: COLORS.white,
+    fontSize: SIZES.xl,
+    fontWeight: "700",
+  },
+
+  email: {
+    color: COLORS.textMuted,
+    fontSize: SIZES.sm,
+    marginTop: 4,
+  },
+
+  coinPill: {
+    marginTop: SPACING.md,
+    backgroundColor: "rgba(245,166,35,0.15)",
+    borderWidth: 1,
+    borderColor: COLORS.gold,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+  },
+
+  coinPillText: {
+    color: COLORS.gold,
+    fontWeight: "700",
+    fontSize: SIZES.md,
+  },
+
+  sectionTitle: {
+    color: COLORS.white,
+    fontSize: SIZES.lg,
+    fontWeight: "700",
+    marginBottom: SPACING.md,
+    marginTop: SPACING.lg,
+  },
+
+  infoCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: RADIUS.lg,
+    overflow: "hidden",
+    marginBottom: SPACING.xl,
+  },
+
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+  },
+
+  infoDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+
+  infoLabel: {
+    color: COLORS.textMuted,
+    fontSize: SIZES.md,
+    flex: 1,
+  },
+
+  infoValue: {
+    color: COLORS.white,
+    fontSize: SIZES.md,
+    fontWeight: "600",
+    flex: 1,
+    textAlign: "right",
+  },
+
+  settingsCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: RADIUS.lg,
+    overflow: "hidden",
+    marginBottom: SPACING.xl,
+  },
+
+  settingsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: SPACING.lg,
+  },
+
+  settingsBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+
+  settingsEmoji: {
+    fontSize: 20,
+    width: 30,
+  },
+
+  settingsLabel: {
+    flex: 1,
+    color: COLORS.white,
+    fontSize: SIZES.md,
+    marginLeft: SPACING.sm,
+  },
+
+  settingsArrow: {
+    color: COLORS.textMuted,
+    fontSize: 24,
+  },
+
+  logoutBtn: {
+    borderWidth: 1.5,
+    borderColor: COLORS.error,
+    borderRadius: RADIUS.lg,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: SPACING.xl,
+  },
+
+  logoutBtnText: {
+    color: COLORS.error,
+    fontSize: SIZES.md,
+    fontWeight: "700",
+  },
 });

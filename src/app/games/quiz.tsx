@@ -1,209 +1,411 @@
-import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import AdModal from '../../components/AdModal';
-import { COLORS, RADIUS, SIZES, SPACING } from '../../constants/theme';
-import { useAuth } from '../../context/AuthContext';
-import { useAdGate } from '../../hooks/useAdGate';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Animated,
+  ImageBackground,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useAuth } from "../../context/AuthContext";
+// --- TYPES ---
+type GameStatus = 'playing' | 'gameover';
 
-const ALL_QUESTIONS = [
-  { q: 'Capital of India?',                  opts: ['Mumbai','New Delhi','Kolkata','Chennai'], ans: 1 },
-  { q: 'Days in a leap year?',               opts: ['364','365','366','367'],                  ans: 2 },
-  { q: 'Planet closest to the Sun?',         opts: ['Venus','Earth','Mars','Mercury'],          ans: 3 },
-  { q: '15% of 200 = ?',                     opts: ['25','30','35','40'],                       ans: 1 },
-  { q: 'Largest ocean?',                     opts: ['Atlantic','Indian','Pacific','Arctic'],    ans: 2 },
-  { q: 'Sides of a hexagon?',                opts: ['5','6','7','8'],                           ans: 1 },
-  { q: 'Symbol for Gold?',                   opts: ['Go','Gd','Au','Ag'],                       ans: 2 },
-  { q: 'How many continents?',               opts: ['5','6','7','8'],                           ans: 2 },
-  { q: '12 × 12 = ?',                        opts: ['132','144','156','124'],                   ans: 1 },
-  { q: 'Inventor of the telephone?',         opts: ['Edison','Tesla','Bell','Marconi'],         ans: 2 },
-  { q: 'Fastest land animal?',               opts: ['Lion','Cheetah','Leopard','Horse'],        ans: 1 },
-  { q: 'Largest planet in solar system?',    opts: ['Saturn','Neptune','Jupiter','Uranus'],     ans: 2 },
-];
-
-const TOTAL_QS    = 5;
-const COINS_EACH  = 5;
-
-function pickQuestions() {
-  return [...ALL_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, TOTAL_QS);
+interface ColorOption {
+  text: string;
+  textColor: string;
 }
 
-export default function QuizScreen() {
-  const { addCoins } = useAuth();
-  const router       = useRouter();
-  const fadeAnim     = useRef(new Animated.Value(1)).current;
+// --- CONSTANTS ---
+const COLORS_MAP: Record<string, string> = {
+  RED: '#e74c3c',
+  BLUE: '#3498db',
+  GREEN: '#2ecc71',
+  YELLOW: '#f1c40f',
+  PURPLE: '#9b59b6',
+  ORANGE: '#e67e22',
+};
 
-  const [questions, setQuestions] = useState(pickQuestions);
-  const [qIndex,    setQIndex]    = useState(0);
-  const [score,     setScore]     = useState(0);
-  const [selected,  setSelected]  = useState<number | null>(null);
-  const [finished,  setFinished]  = useState(false);
+const COLOR_NAMES = Object.keys(COLORS_MAP);
+const MAX_LIVES = 5;
+const COINS_PER_TAP = 10;
 
-  const resetGame = useCallback(() => {
-    setQuestions(pickQuestions());
-    setQIndex(0);
-    setScore(0);
-    setSelected(null);
-    setFinished(false);
-  }, []);
+// --- HELPERS ---
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const a = [...array];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
 
-  const { adVisible, requestPlayAgain, onAdClose } = useAdGate(resetGame);
+const generateRound = (difficulty: number): { targetText: string; options: ColorOption[]; correctCount: number } => {
+  const targetText = COLOR_NAMES[Math.floor(Math.random() * COLOR_NAMES.length)];
+  let options: ColorOption[] = [];
+  
+  // As difficulty increases, add more correct tiles to find (max 3)
+  const correctCount = Math.min(1 + Math.floor(difficulty / 8), 3);
+  
+  for (let i = 0; i < correctCount; i++) {
+    let wrongColorName = targetText;
+    while (wrongColorName === targetText) {
+      wrongColorName = COLOR_NAMES[Math.floor(Math.random() * COLOR_NAMES.length)];
+    }
+    options.push({
+      text: targetText,
+      textColor: COLORS_MAP[wrongColorName], 
+    });
+  }
 
-  const handleAnswer = (optIdx: number) => {
-    if (selected !== null) return;
-    setSelected(optIdx);
+  for (let i = options.length; i < 16; i++) {
+    let wrongText = targetText;
+    while (wrongText === targetText) {
+      wrongText = COLOR_NAMES[Math.floor(Math.random() * COLOR_NAMES.length)];
+    }
+    
+    let textColor = COLORS_MAP[wrongText];
+    if (Math.random() > 0.5) {
+      const randomColor = COLOR_NAMES[Math.floor(Math.random() * COLOR_NAMES.length)];
+      textColor = COLORS_MAP[randomColor];
+    }
+    options.push({ text: wrongText, textColor: textColor });
+  }
 
-    const correct  = optIdx === questions[qIndex].ans;
-    const newScore = correct ? score + 1 : score;
-    if (correct) setScore(newScore);
+  return { targetText, options: shuffleArray(options), correctCount };
+};
 
-    setTimeout(() => {
-      if (qIndex + 1 >= TOTAL_QS) {
-        setFinished(true);
-        const earned = newScore * COINS_EACH;
-        if (earned > 0) addCoins(earned);
-      } else {
-        Animated.sequence([
-          Animated.timing(fadeAnim, { toValue: 0, duration: 120, useNativeDriver: true }),
-          Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-        ]).start();
-        setQIndex(q => q + 1);
-        setSelected(null);
+// --- INSTRUCTIONS POPUP ---
+const InstructionsPopup = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => (
+  <Modal visible={visible} animationType="fade" transparent>
+    <View style={popupStyles.overlay}>
+      <View style={popupStyles.container}>
+        <ImageBackground
+          source={{ uri: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=800&auto=format&fit=crop' }}
+          style={popupStyles.imageBg}
+          imageStyle={{ borderBottomLeftRadius: 20, borderBottomRightRadius: 20 }}
+        >
+          <View style={popupStyles.imageOverlay}>
+            <Text style={popupStyles.title}>COLOR DASH</Text>
+            <Text style={popupStyles.subtitle}>BRAIN TRICK GAME</Text>
+          </View>
+        </ImageBackground>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={popupStyles.content}>
+          <View style={popupStyles.ruleRow}>
+            <Text style={popupStyles.ruleIcon}>🧠</Text>
+            <Text style={popupStyles.ruleText}>Find the tiles that match the TOP word. Ignore the text color!</Text>
+          </View>
+          
+          <View style={popupStyles.ruleRow}>
+            <Text style={popupStyles.ruleIcon}>💰</Text>
+            <Text style={popupStyles.ruleText}>Every correct tap gives you +10 Coins!</Text>
+          </View>
+
+          <View style={popupStyles.ruleRow}>
+            <Text style={popupStyles.ruleIcon}>❤️</Text>
+            <Text style={popupStyles.ruleText}>You start with 5 Lives. A wrong tap or running out of time loses 1 life.</Text>
+          </View>
+
+          <View style={popupStyles.ruleRow}>
+            <Text style={popupStyles.ruleIcon}>💀</Text>
+            <Text style={popupStyles.ruleText}>When all 5 lives are gone, the game ends and you keep your coins.</Text>
+          </View>
+
+          <TouchableOpacity
+            style={popupStyles.button}
+            activeOpacity={0.8}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              onClose();
+            }}
+          >
+            <Text style={popupStyles.buttonText}>START GAME</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </View>
+  </Modal>
+);
+
+const popupStyles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  container: { width: '100%', maxHeight: '85%', backgroundColor: '#12122a', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(241, 196, 15, 0.4)' },
+  imageBg: { width: '100%', height: 160, justifyContent: 'flex-end' },
+  imageOverlay: { backgroundColor: 'rgba(10,10,20,0.75)', padding: 20, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  title: { color: '#f1c40f', fontSize: 28, fontWeight: '900', letterSpacing: 3, textAlign: 'center' },
+  subtitle: { color: '#dfe6e9', fontSize: 12, fontWeight: '600', letterSpacing: 4, textAlign: 'center', marginTop: 4 },
+  content: { padding: 24 },
+  ruleRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20, gap: 15 },
+  ruleIcon: { fontSize: 22, width: 30, textAlign: 'center' },
+  ruleText: { color: '#dfe6e9', fontSize: 15, flex: 1, lineHeight: 22, fontWeight: '500' },
+  button: { backgroundColor: '#f1c40f', height: 55, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 10, shadowColor: '#f1c40f', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6 },
+  buttonText: { color: '#0a0a14', fontSize: 16, fontWeight: '900', letterSpacing: 2 },
+});
+
+// --- MAIN SCREEN ---
+export default function ColorDash() {
+  const [showInstructions, setShowInstructions] = useState(true);
+  const [gameStatus, setGameStatus] = useState<GameStatus>('playing');
+  const [lives, setLives] = useState(MAX_LIVES);
+  const [coinsEarned, setCoinsEarned] = useState(0);
+  const [roundsPlayed, setRoundsPlayed] = useState(0);
+  
+  const [targetText, setTargetText] = useState('');
+  const [options, setOptions] = useState<ColorOption[]>([]);
+  const [correctRemaining, setCorrectRemaining] = useState(0);
+  const [tappedIds, setTappedIds] = useState<Set<number>>(new Set());
+
+  const [timeLeft, setTimeLeft] = useState(100);
+  const timerAnim = useRef(new Animated.Value(100)).current;
+  const timerInterval = useRef<any>(null);
+  const router = useRouter();
+
+const { addCoins } = useAuth();
+
+  const clearTimer = () => { if (timerInterval.current) clearInterval(timerInterval.current); };
+
+  const startTimer = (duration: number) => {
+    clearTimer();
+    setTimeLeft(duration);
+    timerAnim.setValue(duration);
+    Animated.timing(timerAnim, { toValue: 0, duration: duration * 10, useNativeDriver: false }).start();
+    let time = duration;
+    timerInterval.current = setInterval(() => {
+      time -= 1;
+      if (time <= 0) { 
+        clearTimer(); 
+        loseLife("Time's up!"); 
       }
-    }, 900);
+      else setTimeLeft(time);
+    }, 10);
   };
 
-  const q      = questions[qIndex];
-  const earned = score * COINS_EACH;
+  const loadRound = useCallback(() => {
+    const roundData = generateRound(roundsPlayed);
+    setTargetText(roundData.targetText);
+    setOptions(roundData.options);
+    setCorrectRemaining(roundData.correctCount);
+    setTappedIds(new Set());
+    
+    // Gets faster as you play more rounds
+    const duration = Math.max(40, 120 - (roundsPlayed * 2)); 
+    startTimer(duration);
+  }, [roundsPlayed]);
 
-  const optStyle = (i: number) => {
-    if (selected === null) return styles.option;
-    if (i === q.ans)    return [styles.option, styles.optCorrect];
-    if (i === selected) return [styles.option, styles.optWrong];
-    return [styles.option, styles.optDim];
+  useEffect(() => {
+    if (!showInstructions && gameStatus === 'playing') {
+      loadRound();
+    }
+    return () => clearTimer();
+  }, [showInstructions, gameStatus, loadRound]);
+
+  const loseLife = (reason: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    
+    const newLives = lives - 1;
+    setLives(newLives);
+
+    if (newLives <= 0) {
+      setGameStatus('gameover');
+      setTimeout(() => {
+       Alert.alert(
+  "🎉 Game Over",
+  `${reason}
+
+You earned ${coinsEarned} Coins.
+
+Do you want to claim your reward?`,
+  [
+    {
+      text: "Play Again",
+      onPress: resetGame,
+    },
+    {
+      text: `Claim ${coinsEarned} Coins`,
+      onPress: async () => {
+        try {
+          await addCoins(coinsEarned);
+
+          Alert.alert(
+            "Reward Claimed",
+            `${coinsEarned} coins have been added to your account.`,
+            [
+              {
+                text: "OK",
+                onPress: resetGame,
+              },
+            ]
+          );
+        } catch {
+          Alert.alert(
+            "Error",
+            "Unable to save your reward."
+          );
+        }
+      },
+    },
+  ]
+);
+      }, 400);
+    } else {
+      // Flash red and skip to next round
+      setTimeout(() => {
+        setRoundsPlayed(r => r + 1);
+      }, 600);
+    }
   };
+
+  const handleTap = (index: number) => {
+    if (gameStatus !== 'playing' || tappedIds.has(index)) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const newTapped = new Set(tappedIds);
+    newTapped.add(index);
+    setTappedIds(newTapped);
+
+    if (options[index].text === targetText) {
+      // CORRECT!
+      const newCorrectRemaining = correctRemaining - 1;
+      setCorrectRemaining(newCorrectRemaining);
+      setCoinsEarned(c => c + COINS_PER_TAP); // ADD 10 COINS
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      if (newCorrectRemaining <= 0) {
+        clearTimer();
+        // Round complete, go to next
+        setTimeout(() => {
+          setRoundsPlayed(r => r + 1);
+        }, 300);
+      }
+    } else {
+      // WRONG TAP!
+      clearTimer();
+      loseLife(`You tapped "${options[index].text}" instead of "${targetText}".`);
+    }
+  };
+
+  const resetGame = () => {
+    clearTimer();
+    setGameStatus('playing');
+    setLives(MAX_LIVES);
+    setCoinsEarned(0);
+    setRoundsPlayed(0);
+  };
+
+  const widthInterpolate = timerAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+  const getTimerColor = () => timeLeft > 60 ? '#2ecc71' : timeLeft > 30 ? '#f1c40f' : '#e74c3c';
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* Header */}
+    <View style={styles.container}>
+      <InstructionsPopup visible={showInstructions} onClose={() => setShowInstructions(false)} />
+    <View style={styles.topBar}>
+  <TouchableOpacity
+    style={styles.backButton}
+    onPress={() => router.back()}
+  >
+    <Text style={styles.backText}>← Back</Text>
+  </TouchableOpacity>
+</View>
+
+      {/* Header Stats */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>‹  Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>🧠  Quiz Time</Text>
-        <View style={{ width: 64 }} />
+        <View style={styles.statBox}>
+          <Text style={styles.scoreLabel}>LIVES</Text>
+          <Text style={styles.livesText}>{'❤️'.repeat(lives)}{'🖤'.repeat(MAX_LIVES - lives)}</Text>
+        </View>
+        
+        <View style={styles.coinBox}>
+          <Text style={styles.coinText}>+{coinsEarned} 💰</Text>
+        </View>
       </View>
 
-      {!finished ? (
-        <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-          {/* Progress */}
-          <View style={styles.progressWrap}>
-            <View style={[styles.progressBar, { width: `${(qIndex / TOTAL_QS) * 100}%` }]} />
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.meta}>Q {qIndex + 1} / {TOTAL_QS}</Text>
-            <Text style={styles.scoreText}>Score: {score} 🏆</Text>
-          </View>
+      {/* Target Prompt */}
+      <View style={styles.promptContainer}>
+        <Text style={styles.promptSubText}>FIND THE WORD:</Text>
+        <Text style={[styles.promptText, { color: COLORS_MAP[targetText] || '#fff' }]}>
+          {targetText}
+        </Text>
+        <Text style={styles.promptHint}>(Ignore the text color!)</Text>
+      </View>
 
-          {/* Question */}
-          <View style={styles.questionCard}>
-            <Text style={styles.questionText}>{q.q}</Text>
-          </View>
+      {/* Timer Bar */}
+      <View style={styles.timerOuter}>
+        <Animated.View style={[styles.timerInner, { width: widthInterpolate, backgroundColor: getTimerColor() }]} />
+      </View>
 
-          {/* Options */}
-          <View style={styles.options}>
-            {q.opts.map((opt, i) => (
-              <TouchableOpacity
-                key={i}
-                style={optStyle(i)}
-                onPress={() => handleAnswer(i)}
-                disabled={selected !== null}
-                activeOpacity={0.8}
-              >
-                <View style={styles.optBadge}>
-                  <Text style={styles.optBadgeText}>{String.fromCharCode(65 + i)}</Text>
-                </View>
-                <Text style={styles.optText}>{opt}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Animated.View>
-      ) : (
-        /* Finished screen */
-        <View style={styles.finishWrap}>
-          <Text style={styles.finishEmoji}>{score >= 4 ? '🏆' : score >= 2 ? '🎉' : '😢'}</Text>
-          <Text style={styles.finishTitle}>Quiz Complete!</Text>
-          <Text style={styles.finishSub}>You got {score} out of {TOTAL_QS} correct</Text>
+      {/* Grid */}
+      <View style={styles.grid}>
+        {options.map((opt, index) => {
+          const isTapped = tappedIds.has(index);
+          const isCorrectTile = opt.text === targetText;
+          
+          let bgColor = '#1e272e';
+          if (isTapped && isCorrectTile) bgColor = '#27ae60'; 
+          if (isTapped && !isCorrectTile) bgColor = '#c0392b'; 
 
-          <View style={styles.earnedCard}>
-            <Text style={styles.earnedLabel}>Coins Earned</Text>
-            <Text style={styles.earnedValue}>+{earned}  💰</Text>
-          </View>
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[styles.cell, { backgroundColor: bgColor, opacity: isTapped ? 0.5 : 1 }]}
+              onPress={() => handleTap(index)}
+              activeOpacity={0.8}
+              disabled={isTapped}
+            >
+              <Text style={[styles.cellText, { color: opt.textColor }]}>
+                {opt.text}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
-          <TouchableOpacity style={styles.againBtn} onPress={requestPlayAgain}>
-            <Text style={styles.againText}>🔄  Play Again (Watch Ad)</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <AdModal visible={adVisible} onClose={onAdClose} />
-    </SafeAreaView>
+      {/* Footer */}
+      <Text style={styles.footerText}>
+        Tap {correctRemaining} more correct tile{correctRemaining !== 1 ? 's' : ''} (+{COINS_PER_TAP} each)
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: COLORS.bg },
-  header:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, marginBottom: SPACING.md },
-  backBtn: { padding: SPACING.sm },
-  backText:{ color: COLORS.primary, fontSize: SIZES.lg },
-  title:   { color: COLORS.white, fontSize: SIZES.xl, fontWeight: '700' },
-  content: { flex: 1, paddingHorizontal: SPACING.xl },
+  container: { flex: 1, backgroundColor: '#0a0a14', paddingTop: 60, paddingHorizontal: 20, alignItems: 'center' },
+  header: { flexDirection: 'row', width: '100%', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
+  statBox: { backgroundColor: '#1e272e', paddingVertical: 10, paddingHorizontal: 15, borderRadius: 12, alignItems: 'center', flex: 1, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  scoreLabel: { color: '#636e72', fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
+  livesText: { fontSize: 16 }, // Hearts display
+  coinBox: { backgroundColor: '#2d3436', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(241, 196, 15, 0.3)' },
+  coinText: { color: '#f1c40f', fontSize: 20, fontWeight: '900' },
+  promptContainer: { alignItems: 'center', marginBottom: 20 },
+  promptSubText: { color: '#a4b0be', fontSize: 14, fontWeight: '700', letterSpacing: 2, marginBottom: 5 },
+  promptText: { fontSize: 50, fontWeight: '900', letterSpacing: 5 },
+  promptHint: { color: '#636e72', fontSize: 12, marginTop: 5, fontStyle: 'italic' },
+  timerOuter: { width: '100%', height: 8, backgroundColor: '#2f3542', borderRadius: 4, marginBottom: 30, overflow: 'hidden' },
+  timerInner: { height: '100%', borderRadius: 4 },
+  grid: { width: '100%', aspectRatio: 1, maxWidth: 350, flexDirection: 'row', flexWrap: 'wrap', borderRadius: 16, overflow: 'hidden', borderWidth: 2, borderColor: '#2f3542' },
+  cell: { width: '25%', aspectRatio: 1, borderWidth: 1, borderColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  cellText: { fontSize: 16, fontWeight: '900', textTransform: 'uppercase' },
+  footerText: { color: '#a4b0be', fontSize: 16, fontWeight: '700', marginTop: 30, letterSpacing: 1 },
+  topBar: {
+  width: "100%",
+  marginTop: 50,
+  marginBottom: 10,
+},
 
-  progressWrap: { height: 6, backgroundColor: COLORS.bgInput, borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.sm },
-  progressBar:  { height: '100%', backgroundColor: COLORS.quiz, borderRadius: RADIUS.full },
-  metaRow:   { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.xl },
-  meta:      { color: COLORS.textMuted, fontSize: SIZES.sm },
-  scoreText: { color: COLORS.gold, fontSize: SIZES.sm, fontWeight: '700' },
+backButton: {
+  alignSelf: "flex-start",
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+},
 
-  questionCard: {
-    backgroundColor: COLORS.bgCard, borderRadius: RADIUS.xl,
-    padding: SPACING.xl, marginBottom: SPACING.xl,
-    minHeight: 110, justifyContent: 'center',
-  },
-  questionText: { color: COLORS.white, fontSize: SIZES.lg, fontWeight: '600', textAlign: 'center', lineHeight: 26 },
-
-  options:  { gap: SPACING.md },
-  option: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.bgInput,
-    borderRadius: RADIUS.md, padding: SPACING.md,
-    borderWidth: 1.5, borderColor: 'rgba(124,92,191,0.25)',
-    gap: SPACING.md,
-  },
-  optCorrect: { backgroundColor: '#14532d', borderColor: COLORS.success },
-  optWrong:   { backgroundColor: '#7f1d1d', borderColor: COLORS.error },
-  optDim:     { opacity: 0.35 },
-  optBadge: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  optBadgeText: { color: COLORS.white, fontWeight: '700', fontSize: SIZES.sm },
-  optText:      { color: COLORS.white, fontSize: SIZES.md, flex: 1 },
-
-  finishWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.xl },
-  finishEmoji:{ fontSize: 80, marginBottom: SPACING.lg },
-  finishTitle:{ color: COLORS.white, fontSize: SIZES.xxl, fontWeight: '700' },
-  finishSub:  { color: COLORS.textMuted, fontSize: SIZES.md, marginTop: SPACING.sm, marginBottom: SPACING.xl },
-  earnedCard: {
-    backgroundColor: COLORS.bgCard, borderRadius: RADIUS.xl,
-    padding: SPACING.xl, width: '100%', alignItems: 'center',
-    borderWidth: 1.5, borderColor: COLORS.gold, marginBottom: SPACING.xl,
-  },
-  earnedLabel: { color: COLORS.textMuted, fontSize: SIZES.sm, marginBottom: SPACING.sm },
-  earnedValue: { color: COLORS.gold, fontSize: 40, fontWeight: '700' },
-
-  againBtn: { backgroundColor: COLORS.bgCard, borderRadius: RADIUS.lg, paddingVertical: 14, paddingHorizontal: 36, borderWidth: 1.5, borderColor: COLORS.quiz, width: '100%', alignItems: 'center' },
-  againText: { color: COLORS.quiz, fontSize: SIZES.md, fontWeight: '600' },
+backText: {
+  color: "#fff",
+  fontSize: 18,
+  fontWeight: "700",
+},
 });

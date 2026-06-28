@@ -1,12 +1,11 @@
 import 'react-native-gesture-handler';
-import React from 'react';
 
 import { Stack } from 'expo-router';
 
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AuthProvider } from '../../src/context/AuthContext';
+import { AuthProvider } from '../context/AuthContext';
 
 export default function Layout() {
   return (

@@ -1,41 +1,50 @@
+import { auth, db } from '@/firebase/firebaseAuth';
+import { createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { doc, getDoc, increment, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import React, {
   createContext,
   useContext,
   useEffect,
-  useState,
+  useState
 } from 'react';
+
 
 // ─────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────
-
 type User = {
   uid: string;
   email: string;
   displayName: string;
-};
 
+  coins: number;
+  level: number;
+  xp: number;
+  gamesPlayed: number;
+};
 type AuthContextType = {
   user: User | null;
-  coins: number;
   loading: boolean;
 
   register: (
     email: string,
     password: string,
     name: string
-  ) => Promise<User>;
+  ) => Promise<void>;
 
   login: (
     email: string,
     password: string
-  ) => Promise<User>;
+  ) => Promise<void>;
 
   logout: () => Promise<void>;
 
   addCoins: (
     amount: number
   ) => Promise<void>;
+
+  refreshUser: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -56,66 +65,126 @@ export function AuthProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, setUser] =
-    useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
-  const [coins, setCoins] =
-    useState(0);
+  const [loading, setLoading] = useState(true);
 
-  const [loading, setLoading] =
-    useState(true);
-
-  // ───────────────────────────────────────────────────────────
-  // Initial Auth Check
-  // ───────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // ───────────────────────────────────────────────────────────
   // Register
   // ───────────────────────────────────────────────────────────
 
+  const refreshUser = async () => {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      setUser(null);
+      return;
+    }
+
+    const userRef = doc(db, "users", currentUser.uid);
+
+    const snapshot = await getDoc(userRef);
+
+    if (!snapshot.exists()) return;
+
+    const data = snapshot.data();
+
+    setUser({
+      uid: currentUser.uid,
+      email: currentUser.email ?? "",
+      displayName:
+        currentUser.displayName ?? data.displayName,
+
+      coins: data.coins,
+      level: data.level,
+      xp: data.xp,
+      gamesPlayed: data.gamesPlayed,
+    });
+  };
+  useEffect(() => {
+    const unsubscribe =
+      onAuthStateChanged(
+        auth,
+        async (firebaseUser) => {
+          if (firebaseUser) {
+            await refreshUser();
+          } else {
+            setUser(null);
+          }
+
+          setLoading(false);
+        }
+      );
+
+    return unsubscribe;
+  }, []);
+  const forgotPassword = async (email: string) => {
+    try {
+    console.log(
+      "email"
+    );
+    
+    await sendPasswordResetEmail(auth, email);  
+    } catch (error) {
+      console.error("Password Reset failed, Error: ", error);
+      
+    }
+    
+  };
   const register = async (
     email: string,
     password: string,
     name: string
   ) => {
-    const mockUser: User = {
-      uid: 'mock-uid',
-      email,
-      displayName: name,
-    };
+    const credential =
+      await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
 
-    setUser(mockUser);
-    setCoins(0);
+    await updateProfile(
+      credential.user,
+      {
+        displayName: name,
+      }
+    );
 
-    return mockUser;
+    await setDoc(
+      doc(db, "users", credential.user.uid),
+      {
+        displayName: name,
+        email,
+
+        coins: 50,
+
+        level: 1,
+
+        xp: 0,
+
+        gamesPlayed: 0,
+
+        createdAt: serverTimestamp(),
+      }
+    );
+
+    await refreshUser();
   };
-
   // ───────────────────────────────────────────────────────────
   // Login
   // ───────────────────────────────────────────────────────────
-
   const login = async (
     email: string,
     password: string
   ) => {
-    const mockUser: User = {
-      uid: 'mock-uid',
+    await signInWithEmailAndPassword(
+      auth,
       email,
-      displayName: 'User',
-    };
+      password
+    );
 
-    setUser(mockUser);
-    setCoins(50);
-
-    return mockUser;
+    await refreshUser();
   };
 
   // ───────────────────────────────────────────────────────────
@@ -123,8 +192,9 @@ export function AuthProvider({
   // ───────────────────────────────────────────────────────────
 
   const logout = async () => {
+    await signOut(auth);
+
     setUser(null);
-    setCoins(0);
   };
 
   // ───────────────────────────────────────────────────────────
@@ -134,19 +204,33 @@ export function AuthProvider({
   const addCoins = async (
     amount: number
   ) => {
-    setCoins((prev) => prev + amount);
-  };
+    if (!auth.currentUser) return;
 
+    const userRef = doc(
+      db,
+      "users",
+      auth.currentUser.uid
+    );
+
+    await updateDoc(userRef, {
+      coins: increment(amount),
+    });
+
+    await refreshUser();
+  };
   return (
     <AuthContext.Provider
       value={{
         user,
-        coins,
         loading,
+        forgotPassword,
         register,
         login,
         logout,
+
         addCoins,
+
+        refreshUser,
       }}
     >
       {children}

@@ -1,114 +1,214 @@
-import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import {
+  Animated, Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AdModal from '../../components/AdModal';
-import { COLORS, RADIUS, SIZES, SPACING } from '../../constants/theme';
+import GameHeader from '../../components/GameHeader';
+import { COLORS, RADIUS, SIZES, SPACING, glowShadow } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useAdGate } from '../../hooks/useAdGate';
 
-const TOTAL = 16;
-const PRIZE = 30;
 const { width } = Dimensions.get('window');
-const COLS  = 4;
-const GAP   = SPACING.sm;
-const TILE  = (width - SPACING.xl * 2 - GAP * (COLS - 1)) / COLS;
+
+const TOTAL     = 15;
+const PRIZE     = 30;
+const COLS      = 4;
+const GAP       = 10;
+const TILE_SIZE = (width - SPACING.xl * 2 - GAP * (COLS - 1)) / COLS;
 
 export default function LuckyScreen() {
   const { addCoins } = useAuth();
-  const router       = useRouter();
 
   const [selected, setSelected] = useState<number | null>(null);
   const [lucky,    setLucky]    = useState<number | null>(null);
   const [done,     setDone]     = useState(false);
   const [won,      setWon]      = useState(false);
 
+  // One animated value per tile
+  const tileAnims = useRef(
+    Array.from({ length: TOTAL }, () => new Animated.Value(1))
+  ).current;
+  const resultAnim = useRef(new Animated.Value(0)).current;
+
   const resetGame = useCallback(() => {
     setSelected(null);
     setLucky(null);
     setDone(false);
     setWon(false);
+    tileAnims.forEach(a => a.setValue(1));
+    resultAnim.setValue(0);
   }, []);
 
   const { adVisible, requestPlayAgain, onAdClose } = useAdGate(resetGame);
 
+  // Tap a number
+  const pickNumber = (n: number) => {
+    if (done) return;
+    setSelected(prev => {
+      // Bounce the newly selected tile
+      const idx = n - 1;
+      Animated.sequence([
+        Animated.timing(tileAnims[idx], { toValue: 0.88, duration: 80, useNativeDriver: true }),
+        Animated.spring(tileAnims[idx], { toValue: 1, friction: 4, useNativeDriver: true }),
+      ]).start();
+      return n;
+    });
+  };
+
+  // Reveal lucky number
   const reveal = () => {
-    if (selected === null || done) return;
+    if (!selected || done) return;
     const luckyNum = Math.floor(Math.random() * TOTAL) + 1;
     setLucky(luckyNum);
     setDone(true);
-    if (selected === luckyNum) {
-      setWon(true);
-      addCoins(PRIZE);
-    }
+
+    const isWin = selected === luckyNum;
+    setWon(isWin);
+    if (isWin) addCoins(PRIZE);
+
+    // Animate the lucky tile with a big pop
+    Animated.sequence([
+      Animated.timing(tileAnims[luckyNum - 1], { toValue: 1.35, duration: 200, useNativeDriver: true }),
+      Animated.spring(tileAnims[luckyNum - 1], { toValue: 1, friction: 3, useNativeDriver: true }),
+    ]).start();
+
+    // Fade result banner in
+    Animated.timing(resultAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   };
 
-  const tileStyle = (n: number) => {
-    const base = styles.tile;
-    if (!done) return [base, n === selected ? styles.tileSelected : styles.tileDefault];
-    if (n === lucky && n === selected) return [base, styles.tileWin];
-    if (n === lucky)                   return [base, styles.tileLucky];
-    if (n === selected)                return [base, styles.tileLose];
-    return [base, styles.tileFaded];
+  // Determine tile visual state
+  const tileState = (n: number): 'idle' | 'selected' | 'winner' | 'loser' | 'faded' => {
+    if (!done) return n === selected ? 'selected' : 'idle';
+    if (n === lucky && n === selected) return 'winner';
+    if (n === lucky)                   return 'winner';
+    if (n === selected)                return 'loser';
+    return 'faded';
+  };
+
+  const tileStyles: Record<string, object> = {
+    idle:     { backgroundColor: COLORS.bgCard,   borderColor: COLORS.border },
+    selected: { backgroundColor: COLORS.lucky + '22', borderColor: COLORS.lucky },
+    winner:   { backgroundColor: COLORS.success + '25', borderColor: COLORS.success },
+    loser:    { backgroundColor: COLORS.error + '20', borderColor: COLORS.error },
+    faded:    { backgroundColor: COLORS.bgCard,   borderColor: 'transparent', opacity: 0.3 },
+  };
+
+  const tileTextColor: Record<string, string> = {
+    idle:     COLORS.white,
+    selected: COLORS.lucky,
+    winner:   COLORS.success,
+    loser:    COLORS.error,
+    faded:    COLORS.textHint,
   };
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>‹  Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>🍀  Lucky Number</Text>
-        <View style={{ width: 64 }} />
+      <GameHeader title="🍀  Lucky Number" accentColor={COLORS.lucky} />
+
+      {/* Prize banner */}
+      <View style={[styles.prizeBanner, glowShadow(COLORS.lucky, 0.35)]}>
+        <View style={styles.prizeLeft}>
+          <Text style={styles.prizeLabel}>JACKPOT PRIZE</Text>
+          <Text style={styles.prizeAmount}>+{PRIZE} 💰</Text>
+        </View>
+        <View style={styles.prizeDivider} />
+        <View style={styles.prizeRight}>
+          <Text style={styles.prizeLabel}>NUMBERS</Text>
+          <Text style={styles.prizeCount}>1 – {TOTAL}</Text>
+        </View>
       </View>
 
-      <Text style={styles.sub}>Pick any number. Match the lucky draw to win {PRIZE} coins!</Text>
+      {/* Instruction */}
+      <Text style={styles.instruction}>
+        {!done
+          ? selected
+            ? `You picked  #${selected}  — tap Reveal!`
+            : 'Pick any number below 👇'
+          : won
+            ? `#${lucky} was the lucky number!`
+            : `Lucky number was  #${lucky}`}
+      </Text>
 
       {/* Number grid */}
-      <View style={styles.grid}>
-        {Array.from({ length: TOTAL }, (_, i) => i + 1).map(n => (
-          <TouchableOpacity
-            key={n}
-            style={tileStyle(n)}
-            onPress={() => !done && setSelected(n)}
-            disabled={done}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.tileNum}>{n}</Text>
-            {done && n === lucky && <Text style={styles.tileIcon}>⭐</Text>}
-          </TouchableOpacity>
-        ))}
+      <View style={[styles.gridWrap, glowShadow(COLORS.lucky, 0.15)]}>
+        <View style={styles.grid}>
+          {Array.from({ length: TOTAL }, (_, i) => i + 1).map(n => {
+            const state = tileState(n);
+            return (
+              <Animated.View
+                key={n}
+                style={{ transform: [{ scale: tileAnims[n - 1] }] }}
+              >
+                <TouchableOpacity
+                  style={[styles.tile, tileStyles[state],
+                    state === 'selected' && glowShadow(COLORS.lucky, 0.6),
+                    state === 'winner'   && glowShadow(COLORS.success, 0.8),
+                    state === 'loser'    && glowShadow(COLORS.error, 0.4),
+                  ]}
+                  onPress={() => pickNumber(n)}
+                  disabled={done}
+                  activeOpacity={0.75}
+                >
+                  {/* Star icon on winning tile */}
+                  {state === 'winner' && (
+                    <Text style={styles.winnerStar}>⭐</Text>
+                  )}
+                  <Text style={[styles.tileNum, { color: tileTextColor[state] }]}>
+                    {n}
+                  </Text>
+                  {state === 'selected' && (
+                    <View style={styles.selectedDot} />
+                  )}
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
+        </View>
       </View>
 
-      {/* Status */}
-      {!done ? (
-        <Text style={styles.hint}>
-          {selected ? `You picked ${selected} — tap Reveal!` : 'Tap a number to choose'}
-        </Text>
-      ) : (
-        <View style={styles.resultCard}>
-          <Text style={styles.resultEmoji}>{won ? '🎉' : '😢'}</Text>
-          <Text style={styles.resultTitle}>
-            {won
-              ? `You matched ${lucky}! +${PRIZE} coins!`
-              : `Lucky number was ${lucky}`}
+      {/* Result card */}
+      <Animated.View style={[styles.resultCard,
+        won ? styles.resultWin : done ? styles.resultLose : styles.resultHidden,
+        { opacity: resultAnim, transform: [{ scale: resultAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }] },
+      ]}>
+        <Text style={styles.resultEmoji}>{won ? '🎉' : '😢'}</Text>
+        <View>
+          <Text style={[styles.resultTitle, { color: won ? COLORS.gold : COLORS.textMuted }]}>
+            {won ? `You matched #${lucky}!` : `No match this time`}
           </Text>
-          {!won && <Text style={styles.resultSub}>Better luck next time!</Text>}
+          <Text style={[styles.resultSub, { color: won ? COLORS.success : COLORS.textHint }]}>
+            {won ? `+${PRIZE} coins added to your wallet` : `The lucky number was #${lucky}`}
+          </Text>
         </View>
-      )}
+      </Animated.View>
 
+      {/* Action buttons */}
       {!done ? (
         <TouchableOpacity
-          style={[styles.revealBtn, !selected && styles.disabled]}
+          style={[
+            styles.revealBtn,
+            selected ? glowShadow(COLORS.lucky, 0.6) : styles.revealBtnDisabled,
+          ]}
           onPress={reveal}
           disabled={!selected}
+          activeOpacity={0.85}
         >
-          <Text style={styles.revealText}>🎯  Reveal Lucky Number</Text>
+          <Text style={[styles.revealBtnText, !selected && { color: COLORS.textHint }]}>
+            {selected ? '🎯  Reveal Lucky Number' : 'Pick a number first'}
+          </Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity style={styles.againBtn} onPress={requestPlayAgain}>
-          <Text style={styles.againText}>🔄  Play Again (Watch Ad)</Text>
+        <TouchableOpacity
+          style={[styles.againBtn, glowShadow(COLORS.lucky, 0.3)]}
+          onPress={requestPlayAgain}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.againText}>🔄  Play Again · Watch Ad</Text>
         </TouchableOpacity>
       )}
 
@@ -118,40 +218,139 @@ export default function LuckyScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: COLORS.bg, alignItems: 'center', paddingHorizontal: SPACING.xl },
-  header:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingTop: SPACING.md, marginBottom: SPACING.sm },
-  backBtn: { padding: SPACING.sm },
-  backText:{ color: COLORS.primary, fontSize: SIZES.lg },
-  title:   { color: COLORS.white, fontSize: SIZES.xl, fontWeight: '700' },
-  sub:     { color: COLORS.textMuted, fontSize: SIZES.sm, textAlign: 'center', marginBottom: SPACING.xl, lineHeight: 20 },
-
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP, justifyContent: 'center', marginBottom: SPACING.lg, width: '100%' },
-
-  tile:         { width: TILE, height: TILE, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
-  tileDefault:  { backgroundColor: COLORS.bgInput, borderColor: 'transparent' },
-  tileSelected: { backgroundColor: 'rgba(20,184,166,0.2)', borderColor: COLORS.lucky },
-  tileWin:      { backgroundColor: COLORS.success, borderColor: '#86efac' },
-  tileLucky:    { backgroundColor: '#14532d', borderColor: COLORS.success },
-  tileLose:     { backgroundColor: '#7f1d1d', borderColor: COLORS.error },
-  tileFaded:    { backgroundColor: COLORS.bgInput, borderColor: 'transparent', opacity: 0.3 },
-  tileNum:      { color: COLORS.white, fontSize: SIZES.lg, fontWeight: '700' },
-  tileIcon:     { fontSize: 10, position: 'absolute', top: 3, right: 4 },
-
-  hint: { color: COLORS.textMuted, fontSize: SIZES.sm, marginBottom: SPACING.xl },
-
-  resultCard: {
-    backgroundColor: COLORS.bgCard, borderRadius: RADIUS.xl,
-    padding: SPACING.xl, alignItems: 'center', width: '100%',
-    marginBottom: SPACING.xl,
+  safe: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    alignItems: 'center',
   },
-  resultEmoji:{ fontSize: 52, marginBottom: SPACING.sm },
-  resultTitle:{ color: COLORS.white, fontSize: SIZES.lg, fontWeight: '700', textAlign: 'center' },
-  resultSub:  { color: COLORS.textMuted, fontSize: SIZES.sm, marginTop: SPACING.xs },
 
-  revealBtn: { backgroundColor: COLORS.lucky, borderRadius: RADIUS.lg, paddingVertical: 14, paddingHorizontal: 48, width: '100%', alignItems: 'center' },
-  revealText:{ color: '#042f2e', fontSize: SIZES.md, fontWeight: '700' },
-  disabled:  { opacity: 0.4 },
+  // Prize banner
+  prizeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.bgCard,
+    borderRadius: RADIUS.xl,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xl,
+    marginHorizontal: SPACING.xl,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.lucky + '44',
+    width: width - SPACING.xl * 2,
+  },
+  prizeLeft:    { flex: 1, alignItems: 'center' },
+  prizeRight:   { flex: 1, alignItems: 'center' },
+  prizeDivider: { width: 1, height: 40, backgroundColor: COLORS.border },
+  prizeLabel:   { color: COLORS.textMuted, fontSize: SIZES.xs, fontWeight: '700', letterSpacing: 2, marginBottom: 4 },
+  prizeAmount:  { color: COLORS.gold, fontSize: SIZES.xxl, fontWeight: '900' },
+  prizeCount:   { color: COLORS.lucky, fontSize: SIZES.xxl, fontWeight: '900' },
 
-  againBtn: { backgroundColor: COLORS.bgCard, borderRadius: RADIUS.lg, paddingVertical: 14, paddingHorizontal: 36, borderWidth: 1.5, borderColor: COLORS.lucky, width: '100%', alignItems: 'center' },
-  againText: { color: COLORS.lucky, fontSize: SIZES.md, fontWeight: '600' },
+  // Instruction
+  instruction: {
+    color: COLORS.textMuted,
+    fontSize: SIZES.sm,
+    fontWeight: '600',
+    marginBottom: SPACING.lg,
+    textAlign: 'center',
+    paddingHorizontal: SPACING.xl,
+  },
+
+  // Grid
+  gridWrap: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.md,
+    marginHorizontal: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.lucky + '22',
+    marginBottom: SPACING.sm,
+    width: width - SPACING.xl * 2,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: GAP,
+    justifyContent: 'center',
+  },
+  tile: {
+    width: TILE_SIZE,
+    height: TILE_SIZE,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    position: 'relative',
+  },
+  tileNum: {
+    fontSize: SIZES.lg,
+    fontWeight: '800',
+  },
+  selectedDot: {
+    position: 'absolute',
+    bottom: 5,
+    width: 5, height: 5,
+    borderRadius: 3,
+    backgroundColor: COLORS.lucky,
+  },
+  winnerStar: {
+    position: 'absolute',
+    top: 2, right: 4,
+    fontSize: 9,
+  },
+
+  // Result card
+  resultCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    borderRadius: RADIUS.xl,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    marginHorizontal: SPACING.xl,
+    borderWidth: 1.5,
+    marginBottom: SPACING.lg,
+    width: width - SPACING.xl * 2,
+  },
+  resultHidden: { borderColor: 'transparent', backgroundColor: 'transparent' },
+  resultWin:    { backgroundColor: 'rgba(255,215,0,0.08)', borderColor: COLORS.goldDark },
+  resultLose:   { backgroundColor: COLORS.bgCard, borderColor: COLORS.border },
+  resultEmoji:  { fontSize: 36 },
+  resultTitle:  { fontSize: SIZES.md, fontWeight: '800' },
+  resultSub:    { fontSize: SIZES.sm, marginTop: 2 },
+
+  // Buttons
+  revealBtn: {
+    backgroundColor: COLORS.lucky,
+    borderRadius: RADIUS.full,
+    paddingVertical: 16,
+    paddingHorizontal: 48,
+    width: width - SPACING.xl * 2,
+    alignItems: 'center',
+  },
+  revealBtnDisabled: {
+    backgroundColor: COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  revealBtnText: {
+    color: '#002B2E',
+    fontSize: SIZES.lg,
+    fontWeight: '900',
+  },
+
+  againBtn: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: RADIUS.full,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderWidth: 1.5,
+    borderColor: COLORS.lucky,
+    width: width - SPACING.xl * 2,
+    alignItems: 'center',
+  },
+  againText: {
+    color: COLORS.lucky,
+    fontSize: SIZES.md,
+    fontWeight: '700',
+  },
 });
